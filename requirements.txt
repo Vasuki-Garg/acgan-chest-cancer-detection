@@ -1,0 +1,9 @@
+numpy
+matplotlib
+pillow
+scikit-learn
+seaborn
+optuna
+torchviz
+tensorboard
+torchsummary
