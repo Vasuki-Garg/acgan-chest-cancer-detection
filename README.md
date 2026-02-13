@@ -12,4 +12,39 @@ Designed to run in **Google Colab**, with data and outputs stored on **Google Dr
 ---
 
 ## Repository Structure
+acgan-lung-cancer-augmentation/
+├─ README.md
+├─ requirements.txt
+├─ .gitignore
+├─ src/
+│ ├─ init.py
+│ ├─ config.py
+│ ├─ data.py
+│ ├─ models.py
+│ ├─ utils.py
+│ ├─ tune_optuna.py
+│ ├─ train_acgan.py
+│ ├─ generate_images.py
+│ └─ train_cnn.py
+└─ notebooks/
+└─ colab_runner.ipynb
+
+
+---
+
+## Dataset Format (Required)
+
+Your dataset must follow `torchvision.datasets.ImageFolder` structure:
+path_to_filtered_dataset/
+├─ train/
+│ ├─ Adenocarcinoma/
+│ ├─ Large Cell Carcinoma/
+│ ├─ Normal/
+│ └─ Squamous Cell Carcinoma/
+├─ val/
+└─ test/
+
+
+Each class is a folder. Images can be `.png/.jpg/.jpeg/...
+
 
