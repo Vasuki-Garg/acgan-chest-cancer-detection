@@ -31,6 +31,7 @@ acgan-lung-cancer-augmentation/
 └─ notebooks/
    └─ colab_runner.ipynb
 
+## Dataset Format (Required)
 path_to_filtered_dataset/
 ├─ train/
 │  ├─ Adenocarcinoma/
