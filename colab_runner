@@ -1,0 +1,163 @@
+# Colab runner for the ACGAN + CNN repo (src/ split)
+# Usage in Colab:
+# 1) Upload this file to Colab 
+# 2) Edit GITHUB_REPO and BASE_DIR below
+# 3) Run all cells
+
+# --- 0) Repo settings  ---
+GITHUB_REPO = "https://github.com/YOUR_USERNAME/acgan-chest-cancer-detection.git"
+REPO_DIR = "/content/acgan-chest-cancer-detection"
+
+# Your Google Drive base directory (EDIT THIS)
+BASE_DIR = ""
+
+# Dataset paths (ImageFolder format)
+TRAIN_DIR = f"{BASE_DIR}/Data/path_to_filtered_dataset/train"
+VAL_DIR   = f"{BASE_DIR}/Data/path_to_filtered_dataset/val"
+TEST_DIR  = f"{BASE_DIR}/Data/path_to_filtered_dataset/test"
+
+# Output paths on Drive
+MODEL_DIR     = f"{BASE_DIR}/saved_models"
+GENERATED_DIR = f"{BASE_DIR}/generated_outputs"
+RUNS_DIR      = f"{BASE_DIR}/runs"
+
+ARTIFACTS_DIR = f"{REPO_DIR}/artifacts"
+
+# Pipeline toggles
+RUN_OPTUNA = True
+N_TRIALS = 20
+
+TRAIN_ACGAN = True
+NUM_EPOCHS = 500
+
+GENERATE_IMAGES = True
+GEN_MODE = "fixed"     # "fixed" or "balance"
+SAMPLES_PER_CLASS = 500  # used only for fixed mode
+
+TRAIN_CNN = True
+CNN_EPOCHS = 20
+
+# --- 1) System setup ---
+import os
+import sys
+import subprocess
+
+def run(cmd: str):
+    subprocess.check_call(cmd, shell=True)
+
+# --- 2) GPU check ---
+import torch
+print("CUDA available:", torch.cuda.is_available())
+if torch.cuda.is_available():
+    print("GPU:", torch.cuda.get_device_name(0))
+
+# --- 3) Mount Google Drive ---
+from google.colab import drive
+drive.mount("/content/drive")
+
+# --- 4) Clone repo ---
+if not os.path.exists(REPO_DIR):
+    run(f"git clone {GITHUB_REPO} {REPO_DIR}")
+else:
+    print(f"Repo already exists at {REPO_DIR}")
+
+# --- 5) Install requirements ---
+os.chdir(REPO_DIR)
+run("pip -q install -r requirements.txt")
+
+# --- 6) Print resolved paths ---
+print("\n===== PATHS =====")
+print("REPO_DIR:", REPO_DIR)
+print("BASE_DIR:", BASE_DIR)
+print("TRAIN_DIR:", TRAIN_DIR)
+print("VAL_DIR:", VAL_DIR)
+print("TEST_DIR:", TEST_DIR)
+print("MODEL_DIR:", MODEL_DIR)
+print("GENERATED_DIR:", GENERATED_DIR)
+print("RUNS_DIR:", RUNS_DIR)
+print("ARTIFACTS_DIR:", ARTIFACTS_DIR)
+
+os.makedirs(MODEL_DIR, exist_ok=True)
+os.makedirs(GENERATED_DIR, exist_ok=True)
+os.makedirs(RUNS_DIR, exist_ok=True)
+os.makedirs(ARTIFACTS_DIR, exist_ok=True)
+
+BEST_JSON = f"{ARTIFACTS_DIR}/best_params.json"
+BEST_G = f"{MODEL_DIR}/best_netG.pt"
+
+# --- 7) Optuna tuning ---
+if RUN_OPTUNA:
+    run(
+        f"python src/tune_optuna.py "
+        f"--train_dir \"{TRAIN_DIR}\" "
+        f"--out_dir \"{ARTIFACTS_DIR}\" "
+        f"--n_trials {N_TRIALS}"
+    )
+    print("Saved best params:", BEST_JSON)
+else:
+    print("Skipping Optuna tuning.")
+
+# --- 8) Train ACGAN ---
+if TRAIN_ACGAN:
+    best_arg = f"--best_params_json \"{BEST_JSON}\"" if os.path.exists(BEST_JSON) else ""
+    run(
+        f"python src/train_acgan.py "
+        f"--train_dir \"{TRAIN_DIR}\" "
+        f"{best_arg} "
+        f"--model_dir \"{MODEL_DIR}\" "
+        f"--generated_dir \"{GENERATED_DIR}\" "
+        f"--runs_dir \"{RUNS_DIR}\" "
+        f"--num_epochs {NUM_EPOCHS}"
+    )
+    print("Best generator checkpoint:", BEST_G)
+else:
+    print("Skipping ACGAN training.")
+
+# --- 9) Generate synthetic images ---
+if GENERATE_IMAGES:
+    if not os.path.exists(BEST_G):
+        raise FileNotFoundError(f"Generator checkpoint not found: {BEST_G}")
+
+    if GEN_MODE == "fixed":
+        OUT_DIR = f"{BASE_DIR}/augmented_images_fixed"
+        run(
+            f"python src/generate_images.py "
+            f"--checkpoint \"{BEST_G}\" "
+            f"--train_dir \"{TRAIN_DIR}\" "
+            f"--out_dir \"{OUT_DIR}\" "
+            f"--mode fixed "
+            f"--samples_per_class {SAMPLES_PER_CLASS}"
+        )
+        print("Saved synthetic images to:", OUT_DIR)
+
+    elif GEN_MODE == "balance":
+        OUT_DIR = f"{BASE_DIR}/augmented_images_balance"
+        run(
+            f"python src/generate_images.py "
+            f"--checkpoint \"{BEST_G}\" "
+            f"--train_dir \"{TRAIN_DIR}\" "
+            f"--out_dir \"{OUT_DIR}\" "
+            f"--mode balance"
+        )
+        print("Saved synthetic images to:", OUT_DIR)
+
+    else:
+        raise ValueError("GEN_MODE must be 'fixed' or 'balance'")
+else:
+    print("Skipping image generation.")
+
+# --- 10) Train + evaluate CNN ---
+if TRAIN_CNN:
+    run(
+        f"python src/train_cnn.py "
+        f"--train_dir \"{TRAIN_DIR}\" "
+        f"--val_dir \"{VAL_DIR}\" "
+        f"--test_dir \"{TEST_DIR}\" "
+        f"--epochs {CNN_EPOCHS}"
+    )
+else:
+    print("Skipping CNN training.")
+
+print("TensorBoard logs:", RUNS_DIR)
+print("To view in Colab, run:")
+print(f"%load_ext tensorboard\n%tensorboard --logdir \"{RUNS_DIR}\"")
