@@ -1,7 +1,7 @@
-# ACGAN Augmentation + CNN Classification (Lung Cancer, 4 Classes)
+# ACGAN Augmentation + CNN Classification (Chest Cancer, 4 Classes)
 
 This repository contains the pipeline to:
-1) Load a 4-class lung cancer dataset in `ImageFolder` format (train/val/test)
+1) Load a 4-class chest cancer dataset in `ImageFolder` format (train/val/test)
 2) Train an ACGAN (class-conditional GAN)
 3) Tune hyperparameters with Optuna (short trials)
 4) Generate synthetic images (fixed-per-class or class-balanced)
