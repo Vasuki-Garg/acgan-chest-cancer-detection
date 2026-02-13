@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Jupyter
+.ipynb_checkpoints/
+
+# OS
+.DS_Store
+
+# Outputs / logs
+runs/
+generated_outputs/
+saved_models/
+artifacts/
+*.pth
+*.pt
+*.png
+
+# Data (keep off GitHub)
+data/
+datasets/
